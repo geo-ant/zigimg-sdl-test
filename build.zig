@@ -11,9 +11,16 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
+    const lib = b.addStaticLibrary("zigimg", "zigimg/zigimg.zig");
+    lib.setBuildMode(mode);
+    lib.addPackagePath("zigimg", "zigimg/zigimg.zig");
+
+
     const exe = b.addExecutable("zigimg-sdl-test", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
+    exe.addPackagePath("zigimg", "zigimg/zigimg.zig");
+
     exe.linkSystemLibrary("sdl2");
     exe.linkLibC();
     exe.install();
