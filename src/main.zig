@@ -19,7 +19,7 @@ pub fn main() anyerror!void {
     if(image_surface == null) {
             std.log.info("Could not load image.", .{});
     }
-    const texture  = sdl2.SDL_CreateTextureFromSurface(renderer,image_surface);
+    const texture : ?*sdl2.SDL_Texture = sdl2.SDL_CreateTextureFromSurface(renderer,image_surface);
     defer sdl2.SDL_DestroyTexture(texture);
     if(texture == null) {
         std.log.info("Could not generate texture from surface",.{});
@@ -83,7 +83,6 @@ pub fn main() anyerror!void {
     if (bitmap_texture == null) {
         std.log.err("Could not create texture",.{});
     }
-
 
     mainloop: while (true) {
         var sdl_event: sdl2.SDL_Event = undefined;
