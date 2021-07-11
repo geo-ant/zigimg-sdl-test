@@ -8,7 +8,7 @@ pub fn main() anyerror!void {
     _= sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO);
     defer sdl2.SDL_Quit();
 
-    var window = sdl2.SDL_CreateWindow("hello gamedev", sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED, 640, 480, 0);
+    var window = sdl2.SDL_CreateWindow("Examples: zigimg with SDL2", sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED, 640, 480, 0);
     defer sdl2.SDL_DestroyWindow(window);
 
     var renderer = sdl2.SDL_CreateRenderer(window, 0, sdl2.SDL_RENDERER_PRESENTVSYNC);
@@ -30,7 +30,7 @@ pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _=gpa.deinit();
     var allocator : *std.mem.Allocator = &gpa.allocator;
-    var image_file = try openFile(allocator, "assets/logo.bmp");
+    var image_file = try openFile(allocator, "assets/windows_rgba_v5.bmp");
     defer image_file.close();
 
     var stream_source = std.io.StreamSource{.file = image_file};
@@ -56,24 +56,33 @@ pub fn main() anyerror!void {
     }
 
     // see SDL2 docs https://wiki.libsdl.org/SDL_CreateRGBSurfaceFrom
-    const rmask : u32 = 0x000000ff;
-    const gmask : u32 = 0x0000ff00;
-    const bmask : u32 = 0x00ff0000;
-    const amask : u32 = 0xff000000;
-
+    const pixelmask = try extractPixelmask(&bitmap);
     std.log.info("pixel pointer address is {*}", .{&maybe_pixels});
     std.log.info("Color Storage Slice len is {} (expected {})", .{maybe_pixels.?.len(), bitmap.width()*bitmap.height()});
 
     // this is hardcoded for 32bit rgba format. We could easily query for 24bit rgb here. See
     // also the docs https://wiki.libsdl.org/SDL_CreateRGBSurfaceFrom
-    const bitmap_surface =  sdl2.SDL_CreateRGBSurfaceFrom(&maybe_pixels,bitmap.width(),bitmap.height(),32,4*bitmap.width(),rmask,gmask,bmask,amask);
+    const bitmap_surface =  sdl2.SDL_CreateRGBSurfaceFrom(
+        maybe_pixels.?.Argb32.ptr,
+        bitmap.width(),
+        bitmap.height(),
+        32,
+        4*bitmap.width(),
+        pixelmask.red,
+        pixelmask.green,
+        pixelmask.blue,
+        pixelmask.alpha);
+
     defer sdl2.SDL_FreeSurface(bitmap_surface);
     if(bitmap_surface == null) {
-            std.log.err("Could not create bitmap surface.", .{});
+        std.log.err("Could not create bitmap surface.", .{});
     }
 
     const bitmap_texture  = sdl2.SDL_CreateTextureFromSurface(renderer,bitmap_surface);
     defer sdl2.SDL_DestroyTexture(bitmap_texture);
+    if (bitmap_texture == null) {
+        std.log.err("Could not create texture",.{});
+    }
 
 
     mainloop: while (true) {
@@ -92,6 +101,22 @@ pub fn main() anyerror!void {
     }
 
     std.log.info("All your codebase are belong to us.", .{});
+}
+
+// helper structure for getting the pixelmasks out of an image
+const PixelMask = struct {
+    red : u32,
+    green : u32,
+    blue : u32,
+    alpha : u32,
+};
+
+fn extractPixelmask(bmp : *const zigimg.bmp.Bitmap) !PixelMask {
+    switch(bmp.*.infoHeader) {
+        .V4 => |header| return PixelMask{.red = header.redMask, .green = header.greenMask, .blue = header.blueMask, .alpha = header.alphaMask},
+        .V5 => |header| return PixelMask{.red = header.redMask, .green = header.greenMask, .blue = header.blueMask, .alpha = header.alphaMask},
+        else => return error.InvalidHeader,
+    }
 }
 
 fn openFile(allocator : *std.mem.Allocator, relative_path : [] const u8) !std.fs.File {
