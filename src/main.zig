@@ -14,19 +14,6 @@ pub fn main() anyerror!void {
     var renderer = sdl2.SDL_CreateRenderer(window, 0, sdl2.SDL_RENDERER_PRESENTVSYNC);
     defer sdl2.SDL_DestroyRenderer(renderer);
 
-    const image_surface = sdl2.SDL_LoadBMP("assets/logo.bmp");
-    defer sdl2.SDL_FreeSurface(image_surface);
-    if(image_surface == null) {
-            std.log.info("Could not load image.", .{});
-    }
-    const texture : ?*sdl2.SDL_Texture = sdl2.SDL_CreateTextureFromSurface(renderer,image_surface);
-    defer sdl2.SDL_DestroyTexture(texture);
-    if(texture == null) {
-        std.log.info("Could not generate texture from surface",.{});
-    }
-    const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=@divFloor(image_surface.*.w,2),.h=@divFloor(image_surface.*.h,2)};
-
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _=gpa.deinit();
     var allocator : *std.mem.Allocator = &gpa.allocator;
@@ -45,6 +32,7 @@ pub fn main() anyerror!void {
     try bitmap.read(allocator, stream_source.reader(), stream_source.seekableStream(), &maybe_pixels);
     std.log.info("Bitmap Dimensions: {} x {}", .{bitmap.width(), bitmap.height()});
     std.log.info("Bitmap Pixel Format: {}", .{bitmap.pixel_format});
+
 
     switch(maybe_pixels.?) {
         .Argb32 => {
@@ -83,6 +71,7 @@ pub fn main() anyerror!void {
     if (bitmap_texture == null) {
         std.log.err("Could not create texture",.{});
     }
+    const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=bitmap_surface.*.w,.h=bitmap_surface.*.h};
 
     mainloop: while (true) {
         var sdl_event: sdl2.SDL_Event = undefined;
@@ -100,6 +89,12 @@ pub fn main() anyerror!void {
     }
 
     std.log.info("All your codebase are belong to us.", .{});
+}
+
+fn sdlTextureFromData(storage : *const zigimg.color.ColorStorage) !sdl2.SDL_Texture {
+    _ = storage;
+
+    return dong;
 }
 
 // helper structure for getting the pixelmasks out of an image
