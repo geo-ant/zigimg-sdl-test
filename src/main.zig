@@ -17,10 +17,10 @@ pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _=gpa.deinit();
     var allocator : *std.mem.Allocator = &gpa.allocator;
-    var image_file = try openFile(allocator, "assets/windows_rgba_v5.bmp");
-    defer image_file.close();
+    var bmp_file = try openFile(allocator, "assets/windows_rgba_v5.bmp");
+    defer bmp_file.close();
 
-    var stream_source = std.io.StreamSource{.file = image_file};
+    var stream_source = std.io.StreamSource{.file = bmp_file};
     var maybe_pixels: ?zigimg.color.ColorStorage = null; 
     defer {
         if (maybe_pixels) |pixels| {
@@ -32,7 +32,6 @@ pub fn main() anyerror!void {
     try bitmap.read(allocator, stream_source.reader(), stream_source.seekableStream(), &maybe_pixels);
     std.log.info("Bitmap Dimensions: {} x {}", .{bitmap.width(), bitmap.height()});
     std.log.info("Bitmap Pixel Format: {}", .{bitmap.pixel_format});
-
 
     switch(maybe_pixels.?) {
         .Argb32 => {
@@ -56,6 +55,19 @@ pub fn main() anyerror!void {
     }
     const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=bitmap.width(),.h=bitmap.height()};
 
+    var png_file = try openFile(allocator, "assets/png_image.png");
+    defer png_file.close();
+
+    stream_source = std.io.StreamSource{.file = png_file};
+    var png = zigimg.png.PNG.init(allocator);
+    defer png.deinit();
+
+    try png.read(stream_source.reader(), stream_source.seekableStream(), &maybe_pixels);
+    const png_texture = (try sdlTextureFromData(renderer.?,& maybe_pixels.?,.{.w=@intCast(i32,png.header.width), .h = @intCast(i32,png.header.height)},pixelmask));
+
+    _ = png_texture;
+
+
     mainloop: while (true) {
         var sdl_event: sdl2.SDL_Event = undefined;
         while (sdl2.SDL_PollEvent(&sdl_event) != 0) {
@@ -68,6 +80,7 @@ pub fn main() anyerror!void {
         _ = sdl2.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
         _ = sdl2.SDL_RenderClear(renderer);
         _ = sdl2.SDL_RenderCopy(renderer, bitmap_texture,null,&dst_rect);
+        _ = sdl2.SDL_RenderCopy(renderer, png_texture, null, &dst_rect);
         sdl2.SDL_RenderPresent(renderer);
     }
 
