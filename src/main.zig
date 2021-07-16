@@ -74,13 +74,37 @@ pub fn main() anyerror!void {
     std.log.info("All your codebase are belong to us.", .{});
 }
 
-fn sdlTextureFromData(renderer: * sdl2.SDL_Renderer, storage : *const zigimg.color.ColorStorage, dims : Dimensions, pixelmask : PixelMask) ! ?*sdl2.SDL_Texture {
+const ImgData = struct {
+    data_ptr : *c_void,
+    bits : i32,
+    pitch : i32,
+
+    fn init(storage : * zigimg.color.ColorStorage, img_width : i32 ) !@This() {
+         switch (storage.*) {
+             .Argb32 => |argb32|{
+                 return @This(){.data_ptr = argb32.ptr, .bits = 32, .pitch = 4*img_width };
+             },
+             .Rgb24 => |rgb24| {
+                 return @This(){.data_ptr = rgb24.ptr, .bits = 24, .pitch = 3*img_width };
+             },
+             else => {
+                 return error.UnsupportedColorFormat;
+             }
+         }
+    }
+};
+
+
+fn sdlTextureFromData(renderer: * sdl2.SDL_Renderer, storage : *zigimg.color.ColorStorage, dims : Dimensions, pixelmask : PixelMask) ! ?*sdl2.SDL_Texture {
+    
+    const img = try ImgData.init(storage,dims.w);
+
     const surface =  sdl2.SDL_CreateRGBSurfaceFrom(
-        storage.Argb32.ptr,
+        img.data_ptr,
         dims.w,
         dims.h,
-        32,
-        4*dims.w,
+        img.bits,
+        img.pitch,
         pixelmask.red,
         pixelmask.green,
         pixelmask.blue,
