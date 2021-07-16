@@ -21,19 +21,19 @@ pub fn main() anyerror!void {
     defer bmp_file.close();
 
     var stream_source = std.io.StreamSource{.file = bmp_file};
-    var maybe_pixels: ?zigimg.color.ColorStorage = null; 
+    var maybe_bmp_pixels: ?zigimg.color.ColorStorage = null; 
     defer {
-        if (maybe_pixels) |pixels| {
+        if (maybe_bmp_pixels) |pixels| {
             pixels.deinit(allocator);
         }
     }
 
     var bitmap = zigimg.bmp.Bitmap{};
-    try bitmap.read(allocator, stream_source.reader(), stream_source.seekableStream(), &maybe_pixels);
+    try bitmap.read(allocator, stream_source.reader(), stream_source.seekableStream(), &maybe_bmp_pixels);
     std.log.info("Bitmap Dimensions: {} x {}", .{bitmap.width(), bitmap.height()});
     std.log.info("Bitmap Pixel Format: {}", .{bitmap.pixel_format});
 
-    switch(maybe_pixels.?) {
+    switch(maybe_bmp_pixels.?) {
         .Argb32 => {
             std.log.info("Color Storage is Argb32 format", .{});
         },
@@ -44,11 +44,11 @@ pub fn main() anyerror!void {
 
     // see SDL2 docs https://wiki.libsdl.org/SDL_CreateRGBSurfaceFrom
     const pixelmask = try extractPixelmask(&bitmap);
-    std.log.info("pixel pointer address is {*}", .{&maybe_pixels});
-    std.log.info("Color Storage Slice len is {} (expected {})", .{maybe_pixels.?.len(), bitmap.width()*bitmap.height()});
+    std.log.info("pixel pointer address is {*}", .{&maybe_bmp_pixels});
+    std.log.info("Color Storage Slice len is {} (expected {})", .{maybe_bmp_pixels.?.len(), bitmap.width()*bitmap.height()});
 
     // const bitmap_texture  = sdl2.SDL_CreateTextureFromSurface(renderer,bitmap_surface);
-    const bitmap_texture = (try sdlTextureFromData(renderer.?,& maybe_pixels.?,.{.w=bitmap.width(), .h = bitmap.height()},pixelmask));
+    const bitmap_texture = (try sdlTextureFromData(renderer.?,& maybe_bmp_pixels.?,.{.w=bitmap.width(), .h = bitmap.height()},pixelmask));
     defer sdl2.SDL_DestroyTexture(bitmap_texture);
     if (bitmap_texture == null) {
         std.log.err("Could not create texture",.{});
@@ -62,8 +62,16 @@ pub fn main() anyerror!void {
     var png = zigimg.png.PNG.init(allocator);
     defer png.deinit();
 
-    try png.read(stream_source.reader(), stream_source.seekableStream(), &maybe_pixels);
-    const png_texture = (try sdlTextureFromData(renderer.?,& maybe_pixels.?,.{.w=@intCast(i32,png.header.width), .h = @intCast(i32,png.header.height)},pixelmask));
+    var maybe_png_pixels: ?zigimg.color.ColorStorage = null; 
+    defer {
+        if (maybe_png_pixels) |pixels| {
+            pixels.deinit(allocator);
+        }
+    }
+
+
+    try png.read(stream_source.reader(), stream_source.seekableStream(), &maybe_png_pixels);
+    const png_texture = (try sdlTextureFromData(renderer.?,& maybe_png_pixels.?,.{.w=@intCast(i32,png.header.width), .h = @intCast(i32,png.header.height)},pixelmask));
 
     _ = png_texture;
 
