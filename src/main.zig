@@ -48,30 +48,13 @@ pub fn main() anyerror!void {
     std.log.info("pixel pointer address is {*}", .{&maybe_pixels});
     std.log.info("Color Storage Slice len is {} (expected {})", .{maybe_pixels.?.len(), bitmap.width()*bitmap.height()});
 
-    // this is hardcoded for 32bit rgba format. We could easily query for 24bit rgb here. See
-    // also the docs https://wiki.libsdl.org/SDL_CreateRGBSurfaceFrom
-    const bitmap_surface =  sdl2.SDL_CreateRGBSurfaceFrom(
-        maybe_pixels.?.Argb32.ptr,
-        bitmap.width(),
-        bitmap.height(),
-        32,
-        4*bitmap.width(),
-        pixelmask.red,
-        pixelmask.green,
-        pixelmask.blue,
-        pixelmask.alpha);
-
-    defer sdl2.SDL_FreeSurface(bitmap_surface);
-    if(bitmap_surface == null) {
-        std.log.err("Could not create bitmap surface.", .{});
-    }
-
-    const bitmap_texture  = sdl2.SDL_CreateTextureFromSurface(renderer,bitmap_surface);
+    // const bitmap_texture  = sdl2.SDL_CreateTextureFromSurface(renderer,bitmap_surface);
+    const bitmap_texture = (try sdlTextureFromData(renderer.?,& maybe_pixels.?,.{.w=bitmap.width(), .h = bitmap.height()},pixelmask));
     defer sdl2.SDL_DestroyTexture(bitmap_texture);
     if (bitmap_texture == null) {
         std.log.err("Could not create texture",.{});
     }
-    const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=bitmap_surface.*.w,.h=bitmap_surface.*.h};
+    const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=bitmap.width(),.h=bitmap.height()};
 
     mainloop: while (true) {
         var sdl_event: sdl2.SDL_Event = undefined;
@@ -91,11 +74,34 @@ pub fn main() anyerror!void {
     std.log.info("All your codebase are belong to us.", .{});
 }
 
-fn sdlTextureFromData(storage : *const zigimg.color.ColorStorage) !sdl2.SDL_Texture {
-    _ = storage;
+fn sdlTextureFromData(renderer: * sdl2.SDL_Renderer, storage : *const zigimg.color.ColorStorage, dims : Dimensions, pixelmask : PixelMask) ! ?*sdl2.SDL_Texture {
+    const surface =  sdl2.SDL_CreateRGBSurfaceFrom(
+        storage.Argb32.ptr,
+        dims.w,
+        dims.h,
+        32,
+        4*dims.w,
+        pixelmask.red,
+        pixelmask.green,
+        pixelmask.blue,
+        pixelmask.alpha);
+    if(surface == null) {
+        return error.CreateRgbSurface;
+    }
+    defer sdl2.SDL_FreeSurface(surface);
 
-    return dong;
+    var texture = sdl2.SDL_CreateTextureFromSurface(renderer,surface);
+    if (texture == null) {
+        return error.CreateTexture;
+    }
+
+    return texture;
 }
+
+const Dimensions = struct {
+    w: i32, 
+    h : i32
+};
 
 // helper structure for getting the pixelmasks out of an image
 const PixelMask = struct {
