@@ -73,7 +73,8 @@ pub fn main() anyerror!void {
     // try png.read(stream_source.reader(), stream_source.seekableStream(), &maybe_png_pixels);
     // const png_texture = (try sdlTextureFromData(renderer.?,& maybe_png_pixels.?,.{.w=@intCast(i32,png.header.width), .h = @intCast(i32,png.header.height)},pixelmask));
 
-    var png_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/windows_rgba_v5.bmp");
+    var png_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/png_image.png");
+    defer png_image.deinit();
     const png_texture = try sdlTextureFromImage(renderer.?,png_image);
     defer sdl2.SDL_DestroyTexture(png_texture);
 
@@ -182,17 +183,20 @@ fn sdlTextureFromImage(renderer: * sdl2.SDL_Renderer, image : zigimg.image.Image
 
 
     const pxinfo = try PixelInfo.from(image);
-
-    // const data : *c_void = if (image.pixels) |storage| {
-    //     switch(storage) {
-    //         .Argb32 => |argb32| @ptrCast(*c_void,argb32.ptr),
-    //         .Rgb24 => |rgb24| @ptrCast(*c_void,rgb24.ptr),
-    //         else => return error.InvalidColorStorage,
-    //     }
-    // } else {
-    //     return error.EmptyColorStorage;
-    // };
-    const data : ?*c_void = image.pixels.?.Argb32.ptr;
+    // if I don't do the trick with breaking inside the switch,
+    // then it says, the return value of the switch is ignored,
+    // which seems strange to me...    
+    // TODO: ask about this on the discord... 
+    const data : *c_void = blk: {if (image.pixels) |storage| {
+        switch(storage) {
+            .Argb32 => |argb32| break :blk @ptrCast(*c_void,argb32.ptr),
+            .Rgb24 => |rgb24| break :blk @ptrCast(*c_void,rgb24.ptr),
+            else => return error.InvalidColorStorage,
+        }
+    } else {
+        return error.EmptyColorStorage;
+    }};
+    //const data : ?*c_void = image.pixels.?.Argb32.ptr;
 
     const surface =  sdl2.SDL_CreateRGBSurfaceFrom(
         data,
