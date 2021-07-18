@@ -1,18 +1,18 @@
 const std = @import("std");
 
-const sdl2 = @cImport(@cInclude("SDL.h"));
+const c = @import("c.zig");
 const zigimg = @import("zigimg");
 
 pub fn main() anyerror!void {
 
-    _= sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO);
-    defer sdl2.SDL_Quit();
+    _= c.SDL_Init(c.SDL_INIT_VIDEO);
+    defer c.SDL_Quit();
 
-    var window = sdl2.SDL_CreateWindow("Examples: zigimg with SDL2", sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED, 640, 480, 0);
-    defer sdl2.SDL_DestroyWindow(window);
+    var window = c.SDL_CreateWindow("Examples: zigimg with SDL2", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, 640, 480, 0);
+    defer c.SDL_DestroyWindow(window);
 
-    var renderer = sdl2.SDL_CreateRenderer(window, 0, sdl2.SDL_RENDERER_PRESENTVSYNC);
-    defer sdl2.SDL_DestroyRenderer(renderer);
+    var renderer = c.SDL_CreateRenderer(window, 0, c.SDL_RENDERER_PRESENTVSYNC);
+    defer c.SDL_DestroyRenderer(renderer);
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _=gpa.deinit();
@@ -21,31 +21,31 @@ pub fn main() anyerror!void {
     var bitmap_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/windows_rgba_v5.bmp");
     defer bitmap_image.deinit();
     const bitmap_texture = try sdlTextureFromImage(renderer.?,bitmap_image);
-    defer sdl2.SDL_DestroyTexture(bitmap_texture);
+    defer c.SDL_DestroyTexture(bitmap_texture);
 
-    const dst_rect = sdl2.SDL_Rect{.x=0,.y=0,.w=@intCast(c_int,bitmap_image.width),.h=@intCast(c_int,bitmap_image.height)};
+    const dst_rect = c.SDL_Rect{.x=0,.y=0,.w=@intCast(c_int,bitmap_image.width),.h=@intCast(c_int,bitmap_image.height)};
 
     var png_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/png_image.png");
     defer png_image.deinit();
     const png_texture = try sdlTextureFromImage(renderer.?,png_image);
-    defer sdl2.SDL_DestroyTexture(png_texture);
+    defer c.SDL_DestroyTexture(png_texture);
 
-    const dst_rect2 = sdl2.SDL_Rect{.x=dst_rect.w,.y=0,.w=@intCast(c_int,png_image.width),.h=@intCast(c_int,png_image.height)};
+    const dst_rect2 = c.SDL_Rect{.x=dst_rect.w,.y=0,.w=@intCast(c_int,png_image.width),.h=@intCast(c_int,png_image.height)};
 
     mainloop: while (true) {
-        var sdl_event: sdl2.SDL_Event = undefined;
-        while (sdl2.SDL_PollEvent(&sdl_event) != 0) {
+        var sdl_event: c.SDL_Event = undefined;
+        while (c.SDL_PollEvent(&sdl_event) != 0) {
             switch (sdl_event.type) {
-                sdl2.SDL_QUIT => break :mainloop,
+                c.SDL_QUIT => break :mainloop,
                 else => {},
             }
         }
 
-        _ = sdl2.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
-        _ = sdl2.SDL_RenderClear(renderer);
-        _ = sdl2.SDL_RenderCopy(renderer, bitmap_texture,null,&dst_rect);
-        _ = sdl2.SDL_RenderCopy(renderer, png_texture, null, &dst_rect2);
-        sdl2.SDL_RenderPresent(renderer);
+        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+        _ = c.SDL_RenderClear(renderer);
+        _ = c.SDL_RenderCopy(renderer, bitmap_texture,null,&dst_rect);
+        _ = c.SDL_RenderCopy(renderer, png_texture, null, &dst_rect2);
+        c.SDL_RenderPresent(renderer);
     }
 
     std.log.info("All your codebase are belong to us.", .{});
@@ -83,7 +83,7 @@ const PixelInfo = struct {
 };
 
 
-fn sdlTextureFromImage(renderer: * sdl2.SDL_Renderer, image : zigimg.image.Image) ! ?*sdl2.SDL_Texture {
+fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Image) ! ?*c.SDL_Texture {
     
     const pxinfo = try PixelInfo.from(image);
     // if I don't do the trick with breaking inside the switch,
@@ -101,7 +101,7 @@ fn sdlTextureFromImage(renderer: * sdl2.SDL_Renderer, image : zigimg.image.Image
     }};
     //const data : ?*c_void = image.pixels.?.Argb32.ptr;
 
-    const surface =  sdl2.SDL_CreateRGBSurfaceFrom(
+    const surface =  c.SDL_CreateRGBSurfaceFrom(
         data,
         @intCast(c_int,image.width),
         @intCast(c_int,image.height),
@@ -114,9 +114,9 @@ fn sdlTextureFromImage(renderer: * sdl2.SDL_Renderer, image : zigimg.image.Image
     if(surface == null) {
         return error.CreateRgbSurface;
     }
-    defer sdl2.SDL_FreeSurface(surface);
+    defer c.SDL_FreeSurface(surface);
 
-    var texture = sdl2.SDL_CreateTextureFromSurface(renderer,surface);
+    var texture = c.SDL_CreateTextureFromSurface(renderer,surface);
     if (texture == null) {
         return error.CreateTexture;
     }
