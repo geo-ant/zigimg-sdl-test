@@ -3,6 +3,9 @@ const c = @import("c.zig");
 const zigimg = @import("zigimg");
 const utils = @import("utils.zig");
 
+
+/// read all images in the assets folder and render them 
+/// on a square raster. The images will be stretched/squeezed to fit the raster.
 pub fn main() anyerror!void {
 
     _= c.SDL_Init(c.SDL_INIT_VIDEO);
