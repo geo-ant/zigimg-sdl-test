@@ -1,10 +1,9 @@
 const c = @import("c.zig");
 const std = @import("std");
 const zigimg = @import("zigimg");
-const unwrap = @import("metax.zig").unwrap;
 const Allocator = std.mem.Allocator;
 
-pub fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Image) ! ?*c.SDL_Texture {
+pub fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Image) ! *c.SDL_Texture {
     
     const pxinfo = try PixelInfo.from(image);
     // if I don't do the trick with breaking inside the switch,
@@ -37,11 +36,11 @@ pub fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Imag
     defer c.SDL_FreeSurface(surface);
 
     var texture = c.SDL_CreateTextureFromSurface(renderer,surface);
-    if (texture == null) {
+    if (texture) |non_null_texture| {
+        return non_null_texture;
+    } else {
         return error.CreateTexture;
     }
-
-    return texture;
 }
 
 /// a helper structure that contains some info about the pixel layout
@@ -57,7 +56,7 @@ const PixelInfo = struct {
 
     pub fn from(image : zigimg.image.Image) !Self {
         const Sizes = struct {bits : c_int, pitch : c_int};
-        const sizes : Sizes = switch( try unwrap(image.pixels, error.EmptyColorStorage) ) {
+        const sizes : Sizes = switch( image.pixels orelse return error.EmptyColorStorage)  {
             .Argb32 =>  Sizes{.bits = 32, .pitch= 4*@intCast(c_int,image.width)},
             .Rgb24 =>   Sizes{.bits = 24,  .pitch = 3*@intCast(c_int,image.width)},
             else => return error.InvalidColorStorage,
@@ -65,7 +64,7 @@ const PixelInfo = struct {
         return Self {
             .bits = @intCast(c_int,sizes.bits),
             .pitch = @intCast(c_int,sizes.pitch),
-            .pixelmask = try PixelMask.fromColorStorage(try unwrap(image.pixels, error.EmptyColorStorage))
+            .pixelmask = try PixelMask.fromColorStorage(image.pixels orelse return error.EmptyColorStorage)
         };
     }
 
@@ -118,8 +117,8 @@ pub fn openImagesFromDirectoryRelPath(allocator : *std.mem.Allocator, dir_path :
     return array_list.toOwnedSlice();
 }
 
-pub fn sdlTexturesFromImagesAlloc(allocator : * std.mem.Allocator, renderer : * c.SDL_Renderer, images : []zigimg.Image) ! []?*c.SDL_Texture{
-    var array_list = std.ArrayList(zigimg.Image).initCapacity(allocator,images.len);
+pub fn sdlTexturesFromImagesAlloc(allocator : * std.mem.Allocator, renderer : * c.SDL_Renderer, images : []zigimg.Image) ! []*c.SDL_Texture{
+    var array_list = try std.ArrayList(*c.SDL_Texture).initCapacity(allocator,images.len);
     for (images) |image| {
         try array_list.append(try sdlTextureFromImage(renderer,image));
     }
