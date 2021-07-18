@@ -117,6 +117,7 @@ pub fn openImagesFromDirectoryRelPath(allocator : *std.mem.Allocator, dir_path :
     return array_list.toOwnedSlice();
 }
 
+/// transform a slice of images into textures
 pub fn sdlTexturesFromImagesAlloc(allocator : * std.mem.Allocator, renderer : * c.SDL_Renderer, images : []zigimg.Image) ! []*c.SDL_Texture{
     var array_list = try std.ArrayList(*c.SDL_Texture).initCapacity(allocator,images.len);
     for (images) |image| {

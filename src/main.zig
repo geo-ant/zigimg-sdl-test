@@ -8,7 +8,10 @@ pub fn main() anyerror!void {
     _= c.SDL_Init(c.SDL_INIT_VIDEO);
     defer c.SDL_Quit();
 
-    var window = c.SDL_CreateWindow("Examples: zigimg with SDL2", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, 640, 480, 0);
+    // edge length of the square window
+    const WINDOW_SIZE :c_int = 640;
+
+    var window = c.SDL_CreateWindow("Examples: zigimg with SDL2", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, WINDOW_SIZE, WINDOW_SIZE, 0);
     defer c.SDL_DestroyWindow(window);
 
     var renderer = c.SDL_CreateRenderer(window, 0, c.SDL_RENDERER_PRESENTVSYNC) orelse return error.CreateRenderer;
@@ -34,22 +37,22 @@ pub fn main() anyerror!void {
         allocator.free(textures);
     }
 
-    const bitmap_texture = textures[0];
+    _ = c.SDL_SetRenderDrawColor(renderer, 0x80, 0x80, 0x80, 0x00);
+    _ = c.SDL_RenderClear(renderer);
 
+    const TILES_PER_ROW = @floatToInt(c_int,@ceil(@sqrt(@intToFloat(f32,textures.len))));
+    const TILE_SIZE = @intCast(c_int,@divFloor(WINDOW_SIZE,TILES_PER_ROW));
 
-    // var bitmap_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/windows_rgba_v5.bmp");
-    // defer bitmap_image.deinit();
-    // const bitmap_texture = try utils.sdlTextureFromImage(renderer.?,bitmap_image);
-    //defer c.SDL_DestroyTexture(bitmap_texture);
-
-    const dst_rect = c.SDL_Rect{.x=0,.y=0,.w=@intCast(c_int,120),.h=@intCast(c_int,120)};
-
-    var png_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/png_image.png");
-    defer png_image.deinit();
-    const png_texture = try utils.sdlTextureFromImage(renderer,png_image);
-    defer c.SDL_DestroyTexture(png_texture);
-
-    const dst_rect2 = c.SDL_Rect{.x=dst_rect.w,.y=0,.w=@intCast(c_int,png_image.width),.h=@intCast(c_int,png_image.height)};
+    var destination_rect = c.SDL_Rect{.x = 0, .y = 0, .w = TILE_SIZE, .h = TILE_SIZE};
+    for (textures) |texture,idx| {
+        _ = c.SDL_RenderCopy(renderer, texture,null,&destination_rect);
+        destination_rect.x += TILE_SIZE;
+        if (@mod(@intCast(c_int,idx),TILES_PER_ROW)==0) {
+            destination_rect.y += TILE_SIZE;
+            destination_rect.x = 0;
+        }
+    }
+    c.SDL_RenderPresent(renderer);
 
     mainloop: while (true) {
         var sdl_event: c.SDL_Event = undefined;
@@ -59,13 +62,5 @@ pub fn main() anyerror!void {
                 else => {},
             }
         }
-
-        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
-        _ = c.SDL_RenderClear(renderer);
-        _ = c.SDL_RenderCopy(renderer, bitmap_texture,null,&dst_rect);
-        _ = c.SDL_RenderCopy(renderer, png_texture, null, &dst_rect2);
-        c.SDL_RenderPresent(renderer);
     }
-
-    std.log.info("All your codebase are belong to us.", .{});
 }
