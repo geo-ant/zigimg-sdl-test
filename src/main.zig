@@ -1,7 +1,7 @@
 const std = @import("std");
 const c = @import("c.zig");
 const zigimg = @import("zigimg");
-const sdl_utils = @import("sdl_utils.zig");
+const utils = @import("utils.zig");
 
 pub fn main() anyerror!void {
 
@@ -20,14 +20,14 @@ pub fn main() anyerror!void {
 
     var bitmap_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/windows_rgba_v5.bmp");
     defer bitmap_image.deinit();
-    const bitmap_texture = try sdl_utils.sdlTextureFromImage(renderer.?,bitmap_image);
+    const bitmap_texture = try utils.sdlTextureFromImage(renderer.?,bitmap_image);
     defer c.SDL_DestroyTexture(bitmap_texture);
 
     const dst_rect = c.SDL_Rect{.x=0,.y=0,.w=@intCast(c_int,bitmap_image.width),.h=@intCast(c_int,bitmap_image.height)};
 
     var png_image =  try zigimg.image.Image.fromFilePath(allocator, "assets/png_image.png");
     defer png_image.deinit();
-    const png_texture = try sdl_utils.sdlTextureFromImage(renderer.?,png_image);
+    const png_texture = try utils.sdlTextureFromImage(renderer.?,png_image);
     defer c.SDL_DestroyTexture(png_texture);
 
     const dst_rect2 = c.SDL_Rect{.x=dst_rect.w,.y=0,.w=@intCast(c_int,png_image.width),.h=@intCast(c_int,png_image.height)};

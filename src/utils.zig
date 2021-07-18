@@ -1,6 +1,8 @@
 const c = @import("c.zig");
+const std = @import("std");
 const zigimg = @import("zigimg");
 const unwrap = @import("metax.zig").unwrap;
+const Allocator = std.mem.Allocator;
 
 pub fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Image) ! ?*c.SDL_Texture {
     
@@ -95,3 +97,8 @@ const PixelMask = struct {
     }
 };
 
+
+pub fn openImagesFromDirectory(allocator : *std.mem.Allocator, dir_path : [] const u8) ! []zigimg.image.Image {
+    _ = allocator;
+    _ = dir_path;
+}
