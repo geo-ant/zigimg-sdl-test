@@ -44,10 +44,13 @@ pub fn sdlTextureFromImage(renderer: * c.SDL_Renderer, image : zigimg.image.Imag
     return texture;
 }
 
-
+/// a helper structure that contains some info about the pixel layout
 const PixelInfo = struct {
+    /// bits per pixel
     bits : c_int,
+    /// the pitch (see SDL docs, this is the width of the image times the size per pixel in byte)
     pitch : c_int,
+    /// the pixelmask for the (A)RGB storage
     pixelmask : PixelMask,
 
     const Self = @This();
@@ -97,11 +100,9 @@ const PixelMask = struct {
     }
 };
 
-
+/// try to read all files in a directory as images and return the list of images
+/// if one file cannot be read by zigimg, the function returns an error
 pub fn openImagesFromDirectoryRelPath(allocator : *std.mem.Allocator, dir_path : [] const u8) ! []zigimg.image.Image {
-    _ = allocator;
-    _ = dir_path;
-
     var array_list = std.ArrayList(zigimg.image.Image).init(allocator);
     defer array_list.deinit();
 
@@ -114,5 +115,13 @@ pub fn openImagesFromDirectoryRelPath(allocator : *std.mem.Allocator, dir_path :
         }
     }
 
+    return array_list.toOwnedSlice();
+}
+
+pub fn sdlTexturesFromImagesAlloc(allocator : * std.mem.Allocator, renderer : * c.SDL_Renderer, images : []zigimg.Image) ! []?*c.SDL_Texture{
+    var array_list = std.ArrayList(zigimg.Image).initCapacity(allocator,images.len);
+    for (images) |image| {
+        try array_list.append(try sdlTextureFromImage(renderer,image));
+    }
     return array_list.toOwnedSlice();
 }
