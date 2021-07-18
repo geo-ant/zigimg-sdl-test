@@ -47,9 +47,11 @@ pub fn main() anyerror!void {
     for (textures) |texture,idx| {
         _ = c.SDL_RenderCopy(renderer, texture,null,&destination_rect);
         destination_rect.x += TILE_SIZE;
-        if (@mod(@intCast(c_int,idx),TILES_PER_ROW)==0) {
+        std.log.info("Render index {}", .{idx});
+        if (@mod(@intCast(c_int,idx+1),TILES_PER_ROW)==0) {
             destination_rect.y += TILE_SIZE;
             destination_rect.x = 0;
+            std.log.info("linebreak",.{});
         }
     }
     c.SDL_RenderPresent(renderer);
