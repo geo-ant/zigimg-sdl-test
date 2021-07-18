@@ -98,7 +98,21 @@ const PixelMask = struct {
 };
 
 
-pub fn openImagesFromDirectory(allocator : *std.mem.Allocator, dir_path : [] const u8) ! []zigimg.image.Image {
+pub fn openImagesFromDirectoryRelPath(allocator : *std.mem.Allocator, dir_path : [] const u8) ! []zigimg.image.Image {
     _ = allocator;
     _ = dir_path;
+
+    var array_list = std.ArrayList(zigimg.image.Image).init(allocator);
+    defer array_list.deinit();
+
+    const dir = try std.fs.cwd().openDir(dir_path, .{.iterate = true});
+    var iter = dir.iterate();
+    while (try iter.next()) |entry| {
+        if (entry.kind == .File) {
+            var file = try dir.openFile(entry.name,.{});
+            try array_list.append(try zigimg.image.Image.fromFile(allocator,&file));
+        }
+    }
+
+    return array_list.toOwnedSlice();
 }

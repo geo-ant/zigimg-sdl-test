@@ -48,5 +48,13 @@ pub fn main() anyerror!void {
         c.SDL_RenderPresent(renderer);
     }
 
+    const images = try utils.openImagesFromDirectoryRelPath(allocator, "assets");
+    defer {
+        for (images) |image| {
+            image.deinit();
+        }
+        allocator.free(images);
+    }
+
     std.log.info("All your codebase are belong to us.", .{});
 }
